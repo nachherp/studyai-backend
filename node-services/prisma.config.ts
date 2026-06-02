@@ -1,10 +1,11 @@
-import dotenv from 'dotenv';
-
-// Asegura que las variables de entorno se carguen al usar el CLI de Prisma
-dotenv.config();
+import 'dotenv/config';
 
 export default {
-  migrate: {
-    url: process.env.DATABASE_URL,
+  // Le decimos explícitamente a Prisma dónde está tu esquema
+  schema: 'prisma/schema.prisma',
+  
+  // Aquí es donde Prisma 7 espera encontrar la URL para las migraciones
+  datasource: {
+    url: process.env.DIRECT_URL || process.env.DATABASE_URL,
   },
 };
