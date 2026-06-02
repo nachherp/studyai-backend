@@ -1,0 +1,19 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+
+}
+
+// Entidad Principal: Usuarios [cite: 95]
+model User {
+  id            String   @id @default(uuid()) // Identificador único [cite: 96]
+  email         String   @unique @db.VarChar(255) // Correo del usuario [cite: 96]
+  password_hash String   @db.VarChar(255) // Contraseña hasheada [cite: 96]
+  name          String   @db.VarChar(100) // Nombre completo [cite: 96]
+  created_at    DateTime @default(now()) // Fecha de registro [cite: 96]
+
+  @@map("users") // Esto hace que la tabla en SQL se llame 'users' en minúscula
+}

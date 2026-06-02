@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  api-node:
+    build: ./node-services
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/studyai
+    depends_on:
+      - db
+
+  api-python:
+    build: ./python-services
+    ports:
+      - "8000:8000"
+
+  db:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: studyai
