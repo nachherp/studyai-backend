@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 // IMPORTAR RUTAS
 import authRoutes from './routes/auth.routes.js'; 
 import roomRoutes from './routes/room.routes.js';
+import documentsRoutes from './routes/documents.routes.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -45,6 +46,8 @@ const authLimiter = rateLimit({
 // Inyectamos el limitador SOLO en las rutas de login/registro
 app.use('/api/v1/auth', authLimiter, authRoutes);
 app.use('/api/v1/rooms', roomRoutes);
+// Acoplamos las rutas de documentos anidadas dentro de las salas de estudio
+app.use('/api/v1/rooms/:roomId/documents', documentsRoutes);
 app.get('/api/v1/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', message: 'API Gateway funcionando y blindado' });
 });
