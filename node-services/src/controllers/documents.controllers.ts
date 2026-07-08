@@ -114,7 +114,6 @@ export const deleteDocument = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    // 2. Borrar el archivo físico de Supabase Storage usando el nombre correcto de la columna
     const { error: deleteStorageError } = await supabase.storage
       .from('documents')
       .remove([document.storage_path]); // CORRECCIÓN: document.file_path -> document.storage_path

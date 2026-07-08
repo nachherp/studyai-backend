@@ -10,7 +10,7 @@ router.use(requireAuth);
 
 // Endpoint: GET /api/v1/rooms -> Obtener todas mis salas
 router.get('/', getMyRooms);
-
+router.post('/', createRoom);
 // Endpoint: GET /api/v1/rooms/:roomId -> Ver detalles (Cualquier miembro de la sala puede verla)
 router.get('/:roomId', requireRole(['OWNER', 'COLLABORATOR', 'READER']), getRoomDetails);
 
