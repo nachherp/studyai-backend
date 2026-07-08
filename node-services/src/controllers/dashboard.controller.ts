@@ -5,8 +5,6 @@ import prisma from '../lib/prisma.js';
 
 export const getDashboardMetrics = async (req: Request, res: Response) => {
     try {
-        // Obtenemos el ID del usuario inyectado por tu middleware requireAuth
-        // @ts-ignore
         const userId = req.user.id; 
 
         // 1. Contar cuántas salas ha creado usando "studyRoom" (Prisma genera la propiedad en camelCase)
@@ -14,7 +12,6 @@ export const getDashboardMetrics = async (req: Request, res: Response) => {
             where: { owner_id: userId }
         });
 
-        // 2. Contar a cuántas salas pertenece como invitado
         const roomsJoined = await prisma.roomMember.count({
             where: {
                 user_id: userId,
@@ -22,7 +19,6 @@ export const getDashboardMetrics = async (req: Request, res: Response) => {
             }
         });
 
-        // 3. Contar cuántos documentos ha subido el usuario en total en la plataforma
         const totalDocuments = await prisma.document.count({
             where: {
                 uploader_id: userId

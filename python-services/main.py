@@ -16,7 +16,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Conectar las rutas modulares
 app.include_router(documents.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
 app.include_router(generation.router, prefix="/api/v1")

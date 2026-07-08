@@ -6,7 +6,6 @@ import { registerSchema, loginSchema } from '../schemas/auth.schemas.js';
 
 const router = Router();
 
-// Inyectamos la validación obligatoria limpia
 router.post('/register', validateBody(registerSchema), register);
 router.post('/login', validateBody(loginSchema), login);
 

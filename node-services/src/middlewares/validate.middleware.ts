@@ -1,4 +1,3 @@
-// src/middlewares/validate.middleware.ts
 import { type Request, type Response, type NextFunction } from 'express';
 import { type ZodSchema, ZodError } from 'zod';
 
@@ -9,7 +8,6 @@ export const validateBody = (schema: ZodSchema) => {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        // En Zod v4 usamos .issues en lugar de .errors
         const errorMessages = error.issues.map((err: any) => ({
           campo: err.path.join('.'),
           mensaje: err.message,

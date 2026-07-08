@@ -1,17 +1,13 @@
-// src/controllers/documents.controller.ts
 import { type Response } from 'express';
 import { type AuthRequest } from '../middlewares/requireAuth.js';
 import prisma from '../lib/prisma.js';
 import { supabase } from '../lib/supabase.js';
 import multer from 'multer';
 
-// ==========================================
-// 📁 CONFIGURACIÓN DE MULTER (En Memoria)
-// ==========================================
 const storage = multer.memoryStorage();
 export const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // Límite de 10MB por PDF
+  limits: { fileSize: 10 * 1024 * 1024 }, 
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'application/pdf') {
       cb(null, true);
@@ -21,11 +17,7 @@ export const upload = multer({
   },
 });
 
-// ==========================================
-// 🚀 CONTROLADORES DE DOCUMENTOS
-// ==========================================
 
-// 1. SUBIR DOCUMENTO (Node -> Supabase -> Prisma -> FastAPI)
 export const uploadDocument = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { roomId } = req.params as { roomId: string };
@@ -37,7 +29,6 @@ export const uploadDocument = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    // 1. Validar ID y limpiar el nombre del archivo para Supabase (Sin acentos ni caracteres raros)
     if (!roomId || roomId === 'PEGA_AQUI_EL_ROOM_ID') {
       res.status(400).json({ error: 'El ID de la sala es inválido. Revisa tu URL en Postman.' });
       return;
@@ -50,7 +41,6 @@ export const uploadDocument = async (req: AuthRequest, res: Response): Promise<v
 
     const uniqueFileName = `${roomId}/${Date.now()}-${safeFileName}`;
 
-    // 2. Subir el archivo físico a Supabase Storage
     const { data: storageData, error: storageError } = await supabase.storage
       .from('documents')
       .upload(uniqueFileName, file.buffer, {
@@ -66,13 +56,12 @@ export const uploadDocument = async (req: AuthRequest, res: Response): Promise<v
       data: {
         room_id: roomId,
         uploader_id: userId!,
-        filename: file.originalname,      // CORRECCIÓN: name -> filename
-        file_type: file.mimetype,         // Agregado por si tu schema lo requiere
-        storage_path: storageData.path,   // CORRECCIÓN: file_path -> storage_path
+        filename: file.originalname,      
+        file_type: file.mimetype,         
+        storage_path: storageData.path,   
       },
     });
 
-    // 4. DISPARO AL MOTOR RAG (FastAPI)
     try {
       const fastApiUrl = process.env.FASTAPI_URL || 'http://localhost:8000';
       
@@ -82,7 +71,7 @@ export const uploadDocument = async (req: AuthRequest, res: Response): Promise<v
         body: JSON.stringify({
           documentId: newDocument.id,
           roomId: roomId,
-          filePath: storageData.path // Usamos storageData.path en vez de document.file_path
+          filePath: storageData.path 
         }),
       }).catch(err => console.error('Error enviando a FastAPI:', err));
       
@@ -100,7 +89,6 @@ export const uploadDocument = async (req: AuthRequest, res: Response): Promise<v
   }
 };
 
-// 2. ELIMINAR DOCUMENTO (Cumpliendo la regla de simetría)
 export const deleteDocument = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { roomId, documentId } = req.params as { roomId: string; documentId: string };
@@ -116,13 +104,12 @@ export const deleteDocument = async (req: AuthRequest, res: Response): Promise<v
 
     const { error: deleteStorageError } = await supabase.storage
       .from('documents')
-      .remove([document.storage_path]); // CORRECCIÓN: document.file_path -> document.storage_path
+      .remove([document.storage_path]); 
 
     if (deleteStorageError) {
       console.error('Advertencia: No se pudo borrar el archivo de Supabase', deleteStorageError);
     }
 
-    // 3. Borrar el registro de PostgreSQL
     await prisma.document.delete({
       where: { id: documentId },
     });
@@ -146,12 +133,10 @@ export const deleteDocument = async (req: AuthRequest, res: Response): Promise<v
   }
 };
 
-// 3. CONSULTAR ESTADO DEL DOCUMENTO (Endpoint para el Polling del Frontend)
 export const getDocumentStatus = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { roomId, documentId } = req.params as { roomId: string; documentId: string };
 
-    // Buscamos el documento asegurándonos de que pertenezca a la sala
     const doc = await prisma.document.findFirst({
       where: {
         id: documentId,
@@ -164,9 +149,7 @@ export const getDocumentStatus = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    // 🔄 MAPEO AL CONTRATO DEL FRONTEND
-    // Prisma nos da `filename` y `status` (ej. "READY", "PROCESSING")
-    // El front espera `title` y el status en minúsculas.
+    
     res.status(200).json({
       document: {
         id: doc.id,
@@ -176,7 +159,7 @@ export const getDocumentStatus = async (req: AuthRequest, res: Response): Promis
       }
     });
   } catch (error) {
-    console.error('❌ Error al consultar estado del documento:', error);
+    console.error(' Error al consultar estado del documento:', error);
     res.status(500).json({ error: 'Error interno al consultar el estado del documento.' });
   }
 };

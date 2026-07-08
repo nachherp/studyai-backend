@@ -13,7 +13,6 @@ export const requireRole = (allowedRoles: ('OWNER' | 'COLLABORATOR' | 'READER')[
         return;
       }
 
-      // Buscamos si el usuario pertenece a esta sala y qué rol tiene
       const member = await prisma.roomMember.findFirst({
         where: {
           room_id: roomId,
@@ -21,7 +20,6 @@ export const requireRole = (allowedRoles: ('OWNER' | 'COLLABORATOR' | 'READER')[
         },
       });
 
-      // Si no es miembro o su rol no está en la lista de permitidos, lo rebotamos
       if (!member || !allowedRoles.includes(member.role)) {
         res.status(403).json({ error: 'Acceso denegado. No tienes los permisos necesarios en esta sala.' });
         return;

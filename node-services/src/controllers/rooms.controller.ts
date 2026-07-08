@@ -1,22 +1,18 @@
-// src/controllers/rooms.controller.ts
 import { type Response } from 'express';
 import { type AuthRequest } from '../middlewares/requireAuth.js';
 import prisma from '../lib/prisma.js';
 
-// 1. CREAR SALA DE ESTUDIO
 export const createRoom = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { name, description } = req.body;
-    const userId = req.userId; // Este ID viene del middleware de autenticación
+    const userId = req.userId; 
 
     if (!userId) {
       res.status(401).json({ error: 'Usuario no autenticado' });
       return;
     }
 
-    // $transaction asegura que la sala y el miembro se creen juntos o fallen juntos
     const newRoom = await prisma.$transaction(async (tx) => {
-      // 1. Creamos la sala principal
       const room = await tx.studyRoom.create({
         data: {
           name,
@@ -25,7 +21,6 @@ export const createRoom = async (req: AuthRequest, res: Response): Promise<void>
         },
       });
 
-      // 2. Registramos al usuario como miembro y dueño de la sala
       await tx.roomMember.create({
         data: {
           room_id: room.id,
@@ -47,12 +42,10 @@ export const createRoom = async (req: AuthRequest, res: Response): Promise<void>
   }
 };
 
-// 2. LISTAR LAS SALAS DEL USUARIO LOGUEADO
 export const getMyRooms = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.userId;
 
-    // FIX 1: Validación estricta para que TypeScript sepa que userId sí existe
     if (!userId) {
       res.status(401).json({ error: 'Usuario no autenticado' });
       return;
@@ -80,10 +73,8 @@ export const getMyRooms = async (req: AuthRequest, res: Response): Promise<void>
   }
 };
 
-// 3. VER DETALLES DE UNA SALA ESPECÍFICA
 export const getRoomDetails = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // FIX 2: Forzar el tipado a string puro
     const roomId = req.params.roomId as string;
 
     const room = await prisma.studyRoom.findUnique({
@@ -111,10 +102,8 @@ export const getRoomDetails = async (req: AuthRequest, res: Response): Promise<v
   }
 };
 
-// 4. INVITAR/AGREGAR A UN MIEMBRO A LA SALA
 export const addRoomMember = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // FIX 3: Forzar el tipado a string puro
     const roomId = req.params.roomId as string;
     const { email, role } = req.body; 
 

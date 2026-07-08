@@ -19,7 +19,7 @@ async def ingest_document(payload: IngestPayload):
         )
         return {"status": "success", "message": "Documento vectorizado exitosamente"}
     except Exception as e:
-        print(f"❌ Error en ingesta: {str(e)}")
+        print(f" Error en ingesta: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/documents/{document_id}")
@@ -31,5 +31,5 @@ async def delete_document_vectors(document_id: str):
         else:
             return {"status": "not_found", "message": "Vectores no encontrados, pero la petición fue exitosa"}
     except Exception as e:
-        print(f"❌ Error al borrar vectores: {str(e)}")
+        print(f" Error al borrar vectores: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
