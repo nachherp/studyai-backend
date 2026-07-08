@@ -7,13 +7,182 @@ datasource db {
  
 }
 
-// Entidad Principal: Usuarios [cite: 95]
-model User {
-  id            String   @id @default(uuid()) // Identificador único [cite: 96]
-  email         String   @unique @db.VarChar(255) // Correo del usuario [cite: 96]
-  password_hash String   @db.VarChar(255) // Contraseña hasheada [cite: 96]
-  name          String   @db.VarChar(100) // Nombre completo [cite: 96]
-  created_at    DateTime @default(now()) // Fecha de registro [cite: 96]
+// ================= ENUMS =================
+enum RoomRole {
+  OWNER
+  COLLABORATOR
+  READER
+}
 
-  @@map("users") // Esto hace que la tabla en SQL se llame 'users' en minúscula
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+}
+
+// ================= MODELOS PRINCIPALES =================
+model User {
+  id            String   @id @default(uuid())
+  name          String   @db.VarChar(100)
+  email         String   @unique @db.VarChar(255)
+  password_hash String   @db.VarChar(255)
+  created_at    DateTime @default(now())
+
+  ownedRooms   StudyRoom[]
+  memberships  RoomMember[]
+  documents    Document[]
+  chatMessages ChatMessage[]
+  quizAttempts QuizAttempt[]
+
+  @@map("users")
+}
+
+model StudyRoom {
+  id          String   @id @default(uuid())
+  owner_id    String
+  name        String   @db.VarChar(150)
+  description String?  @db.Text
+  created_at  DateTime @default(now())
+
+  owner       User          @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  members     RoomMember[]
+  documents   Document[]
+  messages    ChatMessage[]
+  flashcards  Flashcard[]
+  quizzes     Quiz[]
+
+  @@map("study_rooms")
+}
+
+model RoomMember {
+  room_id   String
+  user_id   String
+  role      RoomRole @default(READER)
+  joined_at DateTime @default(now())
+
+  room StudyRoom @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  user User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([room_id, user_id]) // Evita duplicados
+  @@map("room_members")
+}
+
+// ================= RAG Y DOCUMENTOS =================
+model Document {
+  id           String         @id @default(uuid())
+  room_id      String
+  uploader_id  String
+  filename     String         @db.VarChar(255)
+  file_type    String         // pdf, pptx, txt
+  storage_path String         // URL de Supabase Storage
+  status       DocumentStatus @default(PENDING)
+  chunk_count  Int            @default(0)
+  created_at   DateTime       @default(now())
+
+  room       StudyRoom       @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  uploader   User            @relation(fields: [uploader_id], references: [id], onDelete: Cascade)
+  chunks     DocumentChunk[]
+  flashcards Flashcard[]
+  quizzes    Quiz[]
+
+  @@map("documents")
+}
+
+model DocumentChunk {
+  id          String   @id @default(uuid())
+  document_id String
+  chunk_index Int
+  content     String   @db.Text
+  page_number Int?
+  
+  // EL PUENTE A CHROMADB (¡Sin pgvector!)
+  vector_id   String   @db.VarChar(255) 
+
+  created_at  DateTime @default(now())
+
+  document Document @relation(fields: [document_id], references: [id], onDelete: Cascade)
+
+  @@unique([document_id, chunk_index])
+  @@map("document_chunks")
+}
+
+// ================= CHAT E HISTORIAL =================
+model ChatMessage {
+  id         String   @id @default(uuid())
+  room_id    String
+  user_id    String?
+  role       ChatRole
+  content    String   @db.Text
+  sources    Json?    // Aquí guardaremos las citas (texto y pág) en formato JSON
+  created_at DateTime @default(now())
+
+  room StudyRoom @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  user User?     @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@map("chat_messages")
+}
+
+// ================= FASE 2: HERRAMIENTAS DE ESTUDIO =================
+model Flashcard {
+  id          String   @id @default(uuid())
+  room_id     String
+  document_id String?
+  front       String   @db.Text
+  back        String   @db.Text
+  created_at  DateTime @default(now())
+
+  room     StudyRoom @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  document Document? @relation(fields: [document_id], references: [id], onDelete: SetNull)
+
+  @@map("flashcards")
+}
+
+model Quiz {
+  id          String   @id @default(uuid())
+  room_id     String
+  document_id String?
+  title       String   @db.VarChar(200)
+  type        String   // multiple_choice, true_false, mixed
+  created_at  DateTime @default(now())
+
+  room      StudyRoom      @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  document  Document?      @relation(fields: [document_id], references: [id], onDelete: SetNull)
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id          String   @id @default(uuid())
+  quiz_id     String
+  question    String   @db.Text
+  answer      String   @db.Text
+  options     Json?    // Opciones [A, B, C, D] en JSON
+  explanation String?  @db.Text
+  created_at  DateTime @default(now())
+
+  quiz Quiz @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+
+  @@map("quiz_questions")
+}
+
+model QuizAttempt {
+  id         String   @id @default(uuid())
+  quiz_id    String
+  user_id    String
+  answers    Json     // Lo que respondió el alumno
+  score      Float?
+  created_at DateTime @default(now())
+
+  quiz Quiz @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("quiz_attempts")
 }
