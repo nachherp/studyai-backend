@@ -1,6 +1,7 @@
 // src/routes/documents.routes.ts
 import { Router } from 'express';
-import { uploadDocument, deleteDocument, upload } from '../controllers/documents.controllers.js';
+// ✅ Agregamos getDocumentStatus a la importación
+import { uploadDocument, deleteDocument, getDocumentStatus, upload } from '../controllers/documents.controllers.js'; 
 import { requireAuth } from '../middlewares/requireAuth.js';
 import { requireRole } from '../middlewares/requireRole.js';
 
@@ -31,6 +32,17 @@ router.delete(
   '/:documentId', 
   requireRole(['OWNER', 'COLLABORATOR']), 
   deleteDocument
+);
+
+/**
+ * 🔍 CONSULTAR ESTADO DEL DOCUMENTO (Polling)
+ * Endpoint: GET /api/v1/rooms/:roomId/documents/:documentId
+ * Seguridad: OWNER, COLLABORATOR y READER pueden ver el estado
+ */
+router.get(
+  '/:documentId', 
+  requireRole(['OWNER', 'COLLABORATOR', 'READER']), 
+  getDocumentStatus
 );
 
 export default router;

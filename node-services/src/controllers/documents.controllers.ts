@@ -145,3 +145,38 @@ export const deleteDocument = async (req: AuthRequest, res: Response): Promise<v
     res.status(500).json({ error: 'Error interno al eliminar el documento.' });
   }
 };
+
+// 3. CONSULTAR ESTADO DEL DOCUMENTO (Endpoint para el Polling del Frontend)
+export const getDocumentStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { roomId, documentId } = req.params as { roomId: string; documentId: string };
+
+    // Buscamos el documento asegurándonos de que pertenezca a la sala
+    const doc = await prisma.document.findFirst({
+      where: {
+        id: documentId,
+        room_id: roomId
+      }
+    });
+
+    if (!doc) {
+      res.status(404).json({ error: 'Documento no encontrado en esta sala.' });
+      return;
+    }
+
+    // 🔄 MAPEO AL CONTRATO DEL FRONTEND
+    // Prisma nos da `filename` y `status` (ej. "READY", "PROCESSING")
+    // El front espera `title` y el status en minúsculas.
+    res.status(200).json({
+      document: {
+        id: doc.id,
+        title: doc.filename,
+        status: doc.status.toLowerCase(),
+        created_at: doc.created_at
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error al consultar estado del documento:', error);
+    res.status(500).json({ error: 'Error interno al consultar el estado del documento.' });
+  }
+};
