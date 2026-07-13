@@ -34,7 +34,8 @@ export const uploadDocument = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    const safeFileName = file.originalname
+    const utf8OriginalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    const safeFileName = utf8OriginalName
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -155,7 +156,8 @@ export const getDocumentStatus = async (req: AuthRequest, res: Response): Promis
         id: doc.id,
         title: doc.filename,
         status: doc.status.toLowerCase(),
-        created_at: doc.created_at
+        created_at: doc.created_at,
+        storage_path: doc.storage_path
       }
     });
   } catch (error) {

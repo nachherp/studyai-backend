@@ -6,11 +6,12 @@ router = APIRouter()
 
 class GenerationPayload(BaseModel):
     roomId: str
+    count: int = 3
 
 @router.post("/flashcards")
 async def create_flashcards(payload: GenerationPayload):
     try:
-        flashcards = generate_flashcards(room_id=payload.roomId)
+        flashcards = generate_flashcards(room_id=payload.roomId, count=payload.count)
         return {
             "status": "success",
             "data": flashcards
@@ -21,7 +22,7 @@ async def create_flashcards(payload: GenerationPayload):
 @router.post("/quizzes")
 async def create_quiz(payload: GenerationPayload):
     try:
-        quiz = generate_quiz(room_id=payload.roomId)
+        quiz = generate_quiz(room_id=payload.roomId, count=payload.count)
         return {
             "status": "success",
             "data": quiz

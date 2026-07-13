@@ -3,9 +3,14 @@ import prisma from '../lib/prisma.js';
 
 
 
-export const getDashboardMetrics = async (req: Request, res: Response) => {
+import { type AuthRequest } from '../middlewares/requireAuth.js';
+
+export const getDashboardMetrics = async (req: AuthRequest, res: Response) => {
     try {
-        const userId = req.user.id; 
+        const userId = req.userId; 
+        if (!userId) {
+            return res.status(401).json({ error: 'No autorizado' });
+        }
 
         // 1. Contar cuántas salas ha creado usando "studyRoom" (Prisma genera la propiedad en camelCase)
         const roomsOwned = await prisma.studyRoom.count({
@@ -25,6 +30,26 @@ export const getDashboardMetrics = async (req: Request, res: Response) => {
             }
         });
 
+        const recentDocuments = await prisma.document.findMany({
+            where: {
+                uploader_id: userId
+            },
+            orderBy: {
+                created_at: 'desc'
+            },
+            take: 5,
+            select: {
+                id: true,
+                filename: true,
+                created_at: true,
+                room: {
+                    select: {
+                        name: true
+                    }
+                }
+            }
+        });
+
         // Retornamos la respuesta estructurada limpia
         res.status(200).json({
             status: 'success',
@@ -34,7 +59,8 @@ export const getDashboardMetrics = async (req: Request, res: Response) => {
                     roomsJoined,
                     totalDocuments,
                     totalEngagement: roomsOwned + roomsJoined + totalDocuments
-                }
+                },
+                recentDocuments
             }
         });
     } catch (error) {

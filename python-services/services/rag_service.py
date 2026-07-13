@@ -28,7 +28,7 @@ vector_store = Chroma(
 )
 
 def process_and_vectorize_pdf(document_id: str, room_id: str, file_path: str):
-    print(f" Descargando documento: {file_path}...")
+    print(f"Descargando documento: {file_path}...")
     
     res = supabase.storage.from_("documents").download(file_path)
     
@@ -37,7 +37,7 @@ def process_and_vectorize_pdf(document_id: str, room_id: str, file_path: str):
         tmp_path = tmp_file.name
 
     try:
-        print(" Extrayendo texto y generando chunks...")
+        print("Extrayendo texto y generando chunks...")
         loader = PyPDFLoader(tmp_path)
         docs = loader.load()
 
@@ -51,13 +51,26 @@ def process_and_vectorize_pdf(document_id: str, room_id: str, file_path: str):
             chunk.metadata["document_id"] = document_id
             chunk.metadata["room_id"] = room_id
 
-        print(f" Guardando {len(chunks)} vectores en ChromaDB...")
+        if not chunks:
+            print("El documento no contiene texto extraíble.")
+            supabase.table("documents").update({"status": "FAILED"}).eq("id", document_id).execute()
+            return False
+
+        print(f"Guardando {len(chunks)} vectores en ChromaDB...")
         vector_store.add_documents(chunks)
+        
+        # Update status to READY
+        supabase.table("documents").update({"status": "READY"}).eq("id", document_id).execute()
+        
         return True
         
+    except Exception as e:
+        # Update status to FAILED
+        supabase.table("documents").update({"status": "FAILED"}).eq("id", document_id).execute()
+        raise e
     finally:
         os.remove(tmp_path)
-        print("🧹 Archivo temporal eliminado.")
+        print("Archivo temporal eliminado.")
 
 def delete_vectors_by_document(document_id: str):
     print(f" Buscando vectores para el documento: {document_id}...")
@@ -108,8 +121,9 @@ def ask_question(room_id: str, question: str):
 
     return generate()
 
-def generate_flashcards(room_id: str):
-    print(f" Generando Flashcards para la sala: {room_id}...")
+def generate_flashcards(room_id: str, count: int = 3):
+    count = max(1, min(count, 6))
+    print(f" Generando {count} Flashcards para la sala: {room_id}...")
 
     try:
         docs = vector_store.similarity_search("conceptos clave, definiciones importantes, resumen", k=2, filter={"room_id": room_id})
@@ -117,7 +131,7 @@ def generate_flashcards(room_id: str):
 
         system_prompt = (
             "Eres un creador de material didáctico experto. Tu tarea es extraer conceptos "
-            "clave del contexto proporcionado y crear 3 tarjetas de estudio.\n"
+            f"clave del contexto proporcionado y crear exactamente {count} tarjetas de estudio.\n"
             "DEBES responder con un objeto JSON válido. La propiedad principal DEBE llamarse 'flashcards'.\n"
             "Estructura requerida:\n"
             "{{\n"
@@ -160,8 +174,9 @@ def generate_flashcards(room_id: str):
         return {"error": f"Error al generar tarjetas: {str(e)}"}
 
 
-def generate_quiz(room_id: str):
-    print(f" Generando Quiz para la sala: {room_id}...")
+def generate_quiz(room_id: str, count: int = 3):
+    count = max(1, min(count, 10))
+    print(f" Generando Quiz de {count} preguntas para la sala: {room_id}...")
 
     try:
         docs = vector_store.similarity_search("conceptos clave, procesos, evaluaciones", k=2, filter={"room_id": room_id})
@@ -169,7 +184,7 @@ def generate_quiz(room_id: str):
 
         system_prompt = (
             "Eres un profesor universitario experto elaborando exámenes. Crea un cuestionario "
-            "de 3 preguntas de opción múltiple basado estrictamente en el contexto proporcionado.\n"
+            f"de exactamente {count} preguntas de opción múltiple basado estrictamente en el contexto proporcionado.\n"
             "DEBES responder con un objeto JSON válido. La propiedad principal DEBE llamarse 'quiz'.\n"
             "Estructura requerida:\n"
             "{{\n"

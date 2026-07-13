@@ -54,7 +54,13 @@ export const getMyRooms = async (req: AuthRequest, res: Response): Promise<void>
     const memberships = await prisma.roomMember.findMany({
       where: { user_id: userId },
       include: {
-        room: true, 
+        room: {
+          include: {
+            _count: {
+              select: { documents: true, members: true }
+            }
+          }
+        }, 
       },
     });
 
@@ -63,6 +69,7 @@ export const getMyRooms = async (req: AuthRequest, res: Response): Promise<void>
       name: m.room.name,
       description: m.room.description,
       role: m.role, 
+      _count: m.room._count,
       createdAt: m.room.created_at,
     }));
 
@@ -86,6 +93,14 @@ export const getRoomDetails = async (req: AuthRequest, res: Response): Promise<v
               select: { id: true, name: true, email: true }, 
             },
           },
+        },
+        documents: {
+          orderBy: { created_at: 'desc' },
+          include: {
+            uploader: {
+              select: { name: true }
+            }
+          }
         },
       },
     });
